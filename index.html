@@ -51,6 +51,8 @@
   .shape.square{width:15px;height:15px}.shape.portrait{width:12px;height:16px}.shape.landscape{width:18px;height:13px}
   .stack{display:flex;flex-direction:column;gap:8px;margin-top:14px}
   .row-btns{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+  .row-btns.ins3{grid-template-columns:repeat(3,minmax(0,1fr));gap:6px}
+  .row-btns.ins3 .btn{padding:10px 2px;font-size:13px}
   .toggle-row{display:flex;align-items:center;justify-content:space-between;padding:10px 0 2px;margin-top:10px;border-top:1px solid var(--hair)}
   .switch{position:relative;width:44px;height:26px;flex:none}
   .switch input{opacity:0;width:0;height:0}
@@ -92,6 +94,9 @@
   .grip{position:absolute;left:-30px;top:0;width:22px;height:22px;border-radius:7px;background:#fff;box-shadow:0 1px 4px rgba(0,0,0,.18);display:none;place-items:center;cursor:move;color:var(--muted)}
   .grip svg{width:13px;height:13px}
   .tx:hover .grip,.tx.sel .grip{display:grid}
+  .note .grip{left:0;top:-27px}
+  .note{min-height:4px}
+  .note textarea{cursor:text}
   .tx.fixed{cursor:text}
   .tx.fixed.sel{outline:1px solid rgba(0,113,227,.45);outline-offset:3px}
   .rw{position:absolute;right:-7px;top:50%;width:10px;height:26px;margin-top:-13px;border-radius:6px;background:#fff;border:2px solid var(--blue);display:none;cursor:ew-resize}
@@ -141,8 +146,8 @@
   .el.crop .rh{display:none!important}
   .crop-hint{position:absolute;left:50%;bottom:8px;transform:translateX(-50%);background:rgba(29,29,31,.78);color:#fff;font-size:11px;border-radius:8px;padding:4px 8px;white-space:nowrap;z-index:6;pointer-events:none;font-family:var(--font)}
   .ftb button.txt{width:auto;padding:0 8px;font-size:11.5px;font-weight:600;font-family:var(--font)}
-  .rmenu{position:absolute;top:36px;right:0;background:#fff;border-radius:12px;box-shadow:0 10px 30px rgba(0,0,0,.2);padding:5px;display:grid;grid-template-columns:repeat(2,1fr);gap:2px;width:240px;z-index:10;font-family:var(--font)}
-  .rmenu button{all:unset;cursor:pointer;border-radius:8px;padding:7px 8px;font-size:12px;color:var(--ink);white-space:nowrap;display:flex;align-items:center;gap:8px}
+  .rmenu{position:fixed;background:#fff;border-radius:12px;box-shadow:0 10px 30px rgba(0,0,0,.2);padding:6px;display:grid;grid-template-columns:repeat(2,max-content);gap:2px 4px;z-index:200;font-family:var(--font)}
+  .rmenu button{all:unset;cursor:pointer;border-radius:8px;padding:7px 12px 7px 9px;font-size:12px;color:var(--ink);white-space:nowrap;display:flex;align-items:center;gap:8px}
   .rmenu button:hover{background:var(--bg)} .rmenu button.on{background:rgba(0,113,227,.1);color:var(--blue);font-weight:600}
   .rmenu .ratio-ic{flex:none}
   .range-row{display:flex;align-items:center;gap:10px;margin-top:4px}
@@ -164,7 +169,7 @@
 <header class="topbar">
   <div class="brand">
     <div class="logo-mark"><svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7.5" height="7.5" rx="1.6"/><rect x="13.5" y="3" width="7.5" height="11" rx="1.6"/><rect x="3" y="13.5" width="7.5" height="7.5" rx="1.6"/><rect x="13.5" y="17" width="7.5" height="4" rx="1.4"/></svg></div>
-    <div><h1>Registro Fotográfico</h1><p>Edite direto na página · A4 · <b>versão 14 (26/11/2026)</b></p></div>
+    <div><h1>Registro Fotográfico</h1><p>Edite direto na página · A4</p></div>
   </div>
   <div class="spacer"></div>
   <div class="stats" id="stats"></div>
@@ -178,8 +183,9 @@
       <h2>Inserir</h2>
       <div class="stack" style="margin-top:0">
         <button class="btn btn-primary btn-block" id="btnPhotos"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 16V4"/><path d="m7 9 5-5 5 5"/><path d="M20 16v3a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2v-3"/></svg>Adicionar fotos</button>
-        <div class="row-btns">
+        <div class="row-btns ins3">
           <button class="btn btn-outline btn-block" id="btnFrame">+ Quadro</button>
+          <button class="btn btn-outline btn-block" id="btnText">+ Texto</button>
           <button class="btn btn-outline btn-block" id="btnPage">+ Página</button>
         </div>
       </div>
@@ -192,6 +198,8 @@
 
     <section class="card">
       <h2>Grade de fotos</h2>
+      <div class="seg-label"><span>Formato</span></div>
+      <div class="seg" data-key="format" id="gridFormats"></div>
       <div class="seg-label"><span>Colunas</span><span id="capInfo"></span></div>
       <div class="seg" data-key="cols"><button data-v="1">1</button><button data-v="2">2</button><button data-v="3">3</button><button data-v="4">4</button></div>
       <div class="stack">
@@ -219,7 +227,7 @@ const FOOT_Y = PAGE_H - M / 2 + 1; // linha de base do rodapé (dentro da margem
 /* Proporções (largura:altura). "orig" = proporção original da foto */
 const PRESETS = ['1:1', '3:4', '4:3', '2:3', '3:2', '9:16', '16:9'];
 const ALL_FORMATS = ['orig', ...PRESETS, 'livre'];
-const GRID_FORMATS = ['auto', '1:1', '3:4', '4:3', '9:16', '16:9'];
+const GRID_FORMATS = ['1:1', '3:4', '2:3', '9:16'];
 const LEGACY = { square: '1:1', portrait: '3:4', landscape: '4:3' };
 const parseR = f => { const [a, b] = f.split(':').map(Number); return a / b; };
 function fmtName(f) {
@@ -429,7 +437,8 @@ function unapplyGrid(pi) {
   const extra = [], kids = S.pages.filter(p => p.gridOf === pg.id);
   [pg, ...kids].forEach(p => p.els.forEach(e => { if (e.type === 'image' && e.photo && !known.has(e.photo)) { known.add(e.photo); extra.push(e); } }));
   const txt = pg.els.filter(e => e.type === 'text');
-  pg.els = [...restored.filter(e => e.type !== 'text'), ...txt];
+  const notes = pg.els.filter(e => e.type === 'note');
+  pg.els = [...restored.filter(e => e.type === 'image'), ...notes, ...txt];
   restored.filter(e => e.type === 'text').forEach(t => { const cur = txt.find(c => c.field === t.field); if (cur) Object.assign(cur, { x: t.x, y: t.y, w: t.w }); });
   extra.forEach(e => { const empty = pg.els.find(f => f.type === 'image' && !f.photo); if (empty) assignPhoto(empty, e.photo); else pg.els.push(e); });
   S.pages = S.pages.filter(p => p.gridOf !== pg.id || p.els.some(e => e.type === 'text'));
@@ -523,6 +532,9 @@ function renderAll() {
     if (Math.abs(delta) > .01) followTitle(pg, delta);
   }));
   curPage = clamp(curPage, 0, S.pages.length - 1);
+  closeMenus();
+  // se um campo de texto estiver em edição, ele volta a receber o foco depois de redesenhar
+  const ae = document.activeElement, hold = ae && ae.tagName === 'TEXTAREA' && ae.closest('[data-el]') ? { id: ae.closest('[data-el]').dataset.el, s: ae.selectionStart, e: ae.selectionEnd } : null;
   const root = $('#pages'); root.innerHTML = '';
   S.pages.forEach((pg, pi) => {
     const wrapEl = document.createElement('div'); wrapEl.className = 'page-wrap' + (pi === curPage ? ' cur' : '');
@@ -538,7 +550,7 @@ function renderAll() {
     const page = document.createElement('div'); page.className = 'page'; page.dataset.pi = pi;
     Object.assign(page.style, { width: px(PAGE_W), height: px(PAGE_H), background: rgb(th.page), fontFamily: th.css });
     if (S.margins) { const mg = document.createElement('div'); mg.className = 'margin-guide'; Object.assign(mg.style, { left: px(M), top: px(M), width: px(CW), height: px(GRID_BOTTOM - M) }); page.appendChild(mg); }
-    pg.els.forEach(el => page.appendChild(el.type === 'text' ? textNode(el, th) : frameNode(el, th)));
+    [...pg.els.filter(e => e.type === 'image'), ...pg.els.filter(e => e.type !== 'image')].forEach(el => page.appendChild(el.type === 'text' ? textNode(el, th) : el.type === 'note' ? noteNode(el, th) : frameNode(el, th)));
     if (cropId && pg.els.some(e => e.id === cropId)) { page.classList.add('drag-src'); wrapEl.style.zIndex = 20; }
     footerNodes(page, pi, th);
     page.addEventListener('pointerdown', e => { if (e.target === page || e.target.classList.contains('margin-guide') || e.target.classList.contains('stat')) { select(null); setCur(pi); } });
@@ -549,6 +561,7 @@ function renderAll() {
   });
   if (sel && !findEl(sel)) sel = null;
   if (sel) { const n = document.querySelector(`[data-el="${sel}"]`); n && n.classList.add('sel'); }
+  if (hold) { const t = document.querySelector(`[data-el="${hold.id}"] textarea`); if (t) { t.focus({ preventScroll: true }); try { t.setSelectionRange(hold.s, hold.e); } catch (e) {} } }
   updatePanel(); updateStats(); save();
 }
 function setCur(pi) { curPage = pi; document.querySelectorAll('.page-wrap').forEach((w, i) => w.classList.toggle('cur', i === pi)); }
@@ -701,14 +714,55 @@ function frameNode(el, th) {
   return n;
 }
 
+/* ====================== Caixas de texto livres ====================== */
+const NOTE_SIZES = [9, 11, 14, 18], NOTE_LH = 1.35;
+function noteLayout(el) {
+  const size = el.size || 11, st = el.bold ? 'bold' : 'normal', lineH = size * PT * NOTE_LH;
+  let lines = wrap(el.text || '', el.w, TH(), st, size); if (!lines.length) lines = [''];
+  return { size, st, lineH, lines, h: lines.length * lineH };
+}
+function noteNode(el, th) {
+  const L = noteLayout(el); el.h = L.h;
+  const n = document.createElement('div'); n.className = 'el tx note'; n.dataset.el = el.id;
+  const pos = () => Object.assign(n.style, { left: px(el.x), top: px(el.y), width: px(el.w), height: px(el.h) });
+  pos();
+  const grip = document.createElement('div'); grip.className = 'grip'; grip.title = 'Arrastar a caixa de texto'; grip.innerHTML = ICON.grip;
+  const rw = document.createElement('div'); rw.className = 'rw'; rw.title = 'Largura da caixa';
+  const tag = document.createElement('div'); tag.className = 'size-tag';
+  const ta = document.createElement('textarea'); ta.value = el.text || ''; ta.placeholder = 'Digite o texto…'; ta.spellcheck = true;
+  Object.assign(ta.style, { left: 0, top: 0, width: '100%', height: px(L.h), fontSize: (L.size * PT * K) + 'px', lineHeight: NOTE_LH,
+    fontWeight: el.bold ? 700 : 400, color: rgb(th.ink), fontFamily: th.css });
+  ta.addEventListener('focus', () => { select(el.id); setCur(findEl(el.id).pi); });
+  ta.addEventListener('input', () => { el.text = ta.value; const lay = noteLayout(el); el.h = lay.h; pos(); ta.style.height = px(lay.h); save(); });
+  grip.addEventListener('pointerdown', e => { e.stopPropagation(); startMove(e, el, n); });
+  rw.addEventListener('pointerdown', e => startResize(e, el, n));
+  n.addEventListener('pointerdown', e => { if (e.target === n) { e.preventDefault(); ta.focus(); } });
+  n.append(ta, grip, rw, tag);
+  return n;
+}
+function addNote(pi) {
+  const pg = S.pages[pi], top = pageTop(pi), w = 80;
+  const el = { id: uid(), type: 'note', text: '', x: M, y: top, w, h: 5, size: 11, bold: false };
+  el.h = noteLayout(el).h;
+  const bottom = pg.els.filter(e => e.type !== 'text').reduce((a, e) => Math.max(a, e.y + e.h), 0);
+  if (bottom && bottom + GAP + el.h <= GRID_BOTTOM) el.y = bottom + GAP;
+  pg.els.push(el); sel = el.id; curPage = pi; renderAll();
+  const ta = document.querySelector(`[data-el="${el.id}"] textarea`); if (ta) { ta.focus({ preventScroll: true }); ta.closest('.el').scrollIntoView({ block: 'center', behavior: 'smooth' }); }
+}
+
 /* Menu de proporções no próprio quadro */
+function closeMenus() { document.querySelectorAll('.rmenu').forEach(m => m.remove()); }
 function toggleRatioMenu(tb, el) {
-  const old = document.querySelector('.rmenu'); if (old) { const same = old.parentElement === tb; old.remove(); if (same) return; }
-  const m = document.createElement('div'); m.className = 'rmenu';
+  const old = document.querySelector('.rmenu'); if (old) { const same = old.dataset.owner === el.id; old.remove(); if (same) return; }
+  const m = document.createElement('div'); m.className = 'rmenu'; m.dataset.owner = el.id;
   m.innerHTML = ALL_FORMATS.map(f => `<button data-f="${f}" class="${el.format === f && !el.auto ? 'on' : ''}">${ratioIcon(f, 14)}${f === 'orig' ? 'Original' : f === 'livre' ? 'Personalizado (livre)' : f + (f === '1:1' ? '' : parseR(f) < 1 ? ' retrato' : ' paisagem')}</button>`).join('');
   m.addEventListener('pointerdown', e => e.stopPropagation());
-  m.querySelectorAll('button').forEach(b => b.addEventListener('click', e => { e.stopPropagation(); setRatio(el, b.dataset.f); renderAll(); }));
-  tb.appendChild(m);
+  m.querySelectorAll('button').forEach(b => b.addEventListener('click', e => { e.stopPropagation(); m.remove(); setRatio(el, b.dataset.f); renderAll(); }));
+  // o menu fica no corpo da página (fora do A4) para não ser cortado pelas bordas
+  document.body.appendChild(m);
+  const r = tb.getBoundingClientRect(), mw = m.offsetWidth, mh = m.offsetHeight;
+  let top = r.bottom + 6; if (top + mh > innerHeight - 8) top = Math.max(8, r.top - mh - 6);
+  Object.assign(m.style, { left: clamp(r.right - mw, 8, innerWidth - mw - 8) + 'px', top: top + 'px' });
 }
 /* Modo ajuste: arrastar move a foto dentro do quadro */
 function startPan(e, el, node) {
@@ -791,6 +845,12 @@ function startResize(e, el, node) {
       node.style.width = px(el.w); node.style.height = px(el.h);
       el.box = null; updateImg(node, el);
       if (tag) tag.textContent = `${Math.round(el.w)} × ${Math.round(el.h)} mm`;
+    } else if (el.type === 'note') {
+      let nw = clamp(ow + dx, 20, PAGE_W - M - el.x);
+      if (S.snap && Math.abs(el.x + nw - (PAGE_W - M)) < 1.8) nw = PAGE_W - M - el.x;
+      el.w = nw; const L = noteLayout(el); el.h = L.h;
+      node.style.width = px(el.w); node.style.height = px(el.h); node.querySelector('textarea').style.height = px(L.h);
+      if (tag) tag.textContent = `largura ${Math.round(el.w)} mm`;
     } else {
       let nw = clamp(ow + dx, spec(el.field).min, PAGE_W - el.x);
       if (S.snap && Math.abs(el.x + nw - (PAGE_W - M)) < 1.8) nw = PAGE_W - M - el.x;
@@ -892,9 +952,21 @@ const isFileDrag = e => e.dataTransfer && [...e.dataTransfer.types].includes('Fi
 function updatePanel() {
   const body = $('#selBody'), f = sel && findEl(sel), card = $('#selCard');
   // o card Seleção só aparece quando um quadro de imagem está selecionado
-  if (!f || f.el.type !== 'image') { card.style.display = 'none'; body.innerHTML = ''; return; }
+  if (!f || (f.el.type !== 'image' && f.el.type !== 'note')) { card.style.display = 'none'; body.innerHTML = ''; return; }
   card.style.display = '';
   const el = f.el;
+  if (el.type === 'note') {
+    body.innerHTML = `<div class="seg-label"><span>Tamanho do texto</span></div>
+      <div class="seg" id="noteSize">${NOTE_SIZES.map(v => `<button data-v="${v}" class="${(el.size || 11) === v ? 'on' : ''}">${v} pt</button>`).join('')}</div>
+      <div class="seg-label"><span>Estilo</span></div>
+      <div class="seg" id="noteBold"><button data-v="0" class="${el.bold ? '' : 'on'}">Normal</button><button data-v="1" class="${el.bold ? 'on' : ''}" style="font-weight:700">Negrito</button></div>
+      <div class="row-btns" style="margin-top:12px"><button class="btn btn-outline btn-block" data-s="ndup">Duplicar texto</button><button class="btn btn-outline btn-block" data-s="ndel" style="color:var(--red)">Excluir texto</button></div>`;
+    body.querySelectorAll('#noteSize button').forEach(b => b.onclick = () => { el.size = +b.dataset.v; renderAll(); });
+    body.querySelectorAll('#noteBold button').forEach(b => b.onclick = () => { el.bold = b.dataset.v === '1'; renderAll(); });
+    body.querySelector('[data-s=ndel]').onclick = () => { S.pages[f.pi].els = S.pages[f.pi].els.filter(x => x.id !== el.id); sel = null; renderAll(); };
+    body.querySelector('[data-s=ndup]').onclick = () => { const c = { ...el, id: uid(), y: el.y + el.h + 3 }; clampToPage(c, pageTop(f.pi)); S.pages[f.pi].els.push(c); sel = c.id; renderAll(); };
+    return;
+  }
   // proporção base (escrita como retrato) + orientação
   const isLand = el.format !== 'orig' && el.format !== 'livre' && parseR(el.format) > 1;
   const base = isLand ? el.format.split(':').reverse().join(':') : el.format;
@@ -986,7 +1058,7 @@ async function generatePDF() {
       if (pi) doc.addPage('a4', 'portrait');
       $('#ovText').textContent = `Página ${pi + 1} de ${S.pages.length}`;
       if (th.id !== 'apple') { doc.setFillColor(...th.page); doc.rect(0, 0, PAGE_W, PAGE_H, 'F'); }
-      for (const el of S.pages[pi].els) {
+      for (const el of [...S.pages[pi].els.filter(e => e.type === 'image'), ...S.pages[pi].els.filter(e => e.type !== 'image')]) {
         if (el.type === 'text') {
           const v = (S.fields[el.field] || '').trim(); if (!v) continue;
           const L = textLayout(el), sp = L.sp;
@@ -995,6 +1067,10 @@ async function generatePDF() {
           const fs = sp.size * PT;
           L.lines.forEach((ln, i) => { if (ln) pdfText(doc, th, ln, el.x + sp.pad, el.y + L.top + i * L.lineH + fs * (sp.lh / 2 + th.bo), sp.size, sp.style, th.ink); });
           if (sp.rule) { doc.setDrawColor(...th.rule); doc.setLineWidth(.5); doc.line(el.x, el.y + el.h - .55, el.x + el.w, el.y + el.h - .55); }
+        } else if (el.type === 'note') {
+          if (!(el.text || '').trim()) continue;
+          const L = noteLayout(el), fs = L.size * PT;
+          L.lines.forEach((ln, i) => { if (ln) pdfText(doc, th, ln, el.x, el.y + i * L.lineH + fs * (NOTE_LH / 2 + th.bo), L.size, L.st, th.ink); });
         } else if (el.photo && photos[el.photo]) {
           const data = await renderCell(el, th);
           doc.addImage(data, 'JPEG', el.x, el.y, el.w, el.h, 'f' + el.id, 'NONE');
@@ -1039,7 +1115,9 @@ async function init() {
     arr.forEach(e => { if (e.type === 'image') clampToPage(e, M); });
   }));
   // proporção da grade fixa em 3:4; encaixe magnético e guias de margem sempre ativos
-  S.format = '3:4'; S.snap = true; S.margins = true;
+  if (!GRID_FORMATS.includes(S.format)) S.format = '3:4';
+  S.snap = true; S.margins = true;
+  $('#gridFormats').innerHTML = GRID_FORMATS.map(f => `<button data-v="${f}">${ratioIcon(f, 15)}${f}</button>`).join('');
   S.pages.forEach(p => p.els.forEach(e => { if (e.photo && !photos[e.photo]) e.photo = null; }));
   S.pages.forEach(p => p.els.forEach(e => { if (e.type !== 'image') return; if (LEGACY[e.format]) e.format = LEGACY[e.format]; if (!ALL_FORMATS.includes(e.format)) e.format = '1:1'; e.zoom = e.zoom || 1; e.fx = e.fx ?? .5; e.fy = e.fy ?? .5; }));
   // versões anteriores: os quadros passam a começar logo abaixo do título
@@ -1074,7 +1152,7 @@ async function init() {
     }
     S.gridAllUndo = clone(S.pages);
     const list = allFrames().map(o => o.el.photo).filter(Boolean);
-    const keep = S.pages.filter(p => p.els.some(e => e.type === 'text'));
+    const keep = S.pages.filter(p => p.els.some(e => e.type === 'text' || e.type === 'note'));
     S.pages = keep.length ? keep : [newPage()];
     let rest = list;
     S.pages.forEach((p, pi) => { rest = buildGrid(pi, rest); });
@@ -1084,6 +1162,7 @@ async function init() {
   };
   $('#btnPhotos').onclick = () => { pendingFrame = null; $('#fileInput').click(); };
   $('#btnFrame').onclick = () => addFrame(curPage);
+  $('#btnText').onclick = () => addNote(curPage);
   $('#btnPage').onclick = () => { S.pages.splice(curPage + 1, 0, newPage()); buildGrid(curPage + 1, []); curPage++; renderAll(); document.querySelectorAll('.page-wrap')[curPage].scrollIntoView({ behavior: 'smooth', block: 'start' }); };
   // "Adicionar fotos" preenche a partir da página 1 até lotá-la; o excedente segue para as próximas / novas páginas
   $('#fileInput').addEventListener('change', e => { const files = [...e.target.files]; e.target.value = ''; if (files.length) placePhotos(files, pendingFrame, pendingFrame ? null : 0); pendingFrame = null; });
@@ -1109,13 +1188,15 @@ async function init() {
     if (e.key === 'Escape' && exitCrop()) return;
     const f = findEl(sel); if (!f) return;
     const st = e.shiftKey ? 5 : 1, el = f.el;
-    if (e.key === 'Delete' || e.key === 'Backspace') { if (el.type === 'image') { e.preventDefault(); frameAction('trash', el); } return; }
+    if (e.key === 'Delete' || e.key === 'Backspace') { if (el.type === 'image') { e.preventDefault(); frameAction('trash', el); } if (el.type === 'note') { e.preventDefault(); S.pages[f.pi].els = S.pages[f.pi].els.filter(x => x.id !== el.id); sel = null; renderAll(); } return; }
     if (e.key === 'Escape') return select(null);
     const mv = { ArrowLeft: [-st, 0], ArrowRight: [st, 0], ArrowUp: [0, -st], ArrowDown: [0, st] }[e.key];
     if (mv && el.type === 'text') return;
     if (mv) { e.preventDefault(); el.x += mv[0]; el.y += mv[1]; clampToPage(el); if (el.box) el.box = null; renderAll(); }
   });
-  let rt; window.addEventListener('resize', () => { clearTimeout(rt); rt = setTimeout(renderAll, 120); });
+  let rt, lastW = $('#stage').clientWidth;
+  window.addEventListener('resize', () => { clearTimeout(rt); rt = setTimeout(() => { const w = $('#stage').clientWidth; if (w === lastW) return; lastW = w; renderAll(); }, 120); });
+  $('#stage').addEventListener('scroll', closeMenus, { passive: true }); window.addEventListener('scroll', closeMenus, { passive: true });
   if (!hasPDF()) { const t = setInterval(() => { if (hasPDF()) { clearInterval(t); renderAll(); } }, 300); setTimeout(() => clearInterval(t), 15000); }
 }
 document.addEventListener('DOMContentLoaded', init);
